@@ -54,10 +54,20 @@ Use this skill when the user wants to:
 
 ## MVP Workflow
 
+**For installation, read `references/installation.md` first.**
+
 ```bash
+# 1. Install (runs system compatibility check + auto-fix guidance)
 bash skills/biomimetic-memory-architecture/scripts/install.sh
+
+# 2. If system check shows critical issues:
+#    Execute the gateway config.patch commands shown in the output
+
+# 3. Verify
 bash skills/biomimetic-memory-architecture/scripts/verify.sh
+
+# 4. Phase 1 retention audit (read-only)
 python3 skills/biomimetic-memory-architecture/scripts/bma_retention_audit.py --workspace . --older-than-days 30
 ```
 
-The retention audit writes a report under `memory-archive/reports/` and does not modify source memory files.
+See `references/installation.md` for the complete agent-side installation flow including system config auto-fix.

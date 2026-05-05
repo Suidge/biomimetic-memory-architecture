@@ -107,6 +107,7 @@ BMA (daily distillation + weekly synthesis + retention)
 
 ```bash
 bash skills/biomimetic-memory-architecture/scripts/install.sh
+
 ```
 
 ---
@@ -184,11 +185,17 @@ skills/biomimetic-memory-architecture/scripts/
 
 ## Quick Start
 
+> **Read `references/installation.md` for the complete agent-side installation flow.**
+
 ```bash
-# Install (creates cron jobs, directories, vault)
+# 1. Install (runs system compatibility check)
 bash skills/biomimetic-memory-architecture/scripts/install.sh
 
-# Verify
+# 2. If system check shows critical issues:
+#    Execute the gateway config.patch commands shown in the output
+#    Then re-run verify.sh
+
+# 3. Verify
 bash skills/biomimetic-memory-architecture/scripts/verify.sh
 
 # Phase 1: Audit aged archives (read-only)
