@@ -41,7 +41,118 @@ BMA does not optimize for recall speed. It optimizes for **signal retention** �
 
 ---
 
-## Provenance
+## System Compatibility
+
+BMA builds on OpenClaw's built-in memory subsystems. For BMA to function correctly, these baseline settings are required:
+
+### memory-wiki
+
+BMA's structured memory files live in `memory/`. memory-wiki indexes them for search and recall.
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `bridge.indexDailyNotes` | `true` | **Required.** BMA's daily logs and structured files must be indexed for search. |
+| `bridge.indexDreamReports` | `false` | **Required.** BMA handles dreaming output via its own distillation pipeline. memory-wiki should not independently index dream reports. |
+| `bridge.indexMemoryRoot` | `true` | Recommends indexing MEMORY.md, TOOLS.md, INFRA.md at the root level. |
+| `bridge.followMemoryEvents` | `false` | BMA does not use event-triggered memory updates. |
+
+### memory-core (dreaming)
+
+OpenClaw's default dreaming system generates memory promotion candidates. BMA's daily distillation handles the actual writes.
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `dreaming.phases.deep.enabled` | `false` | **Required.** OpenClaw's deep promotion writes directly to MEMORY.md — this conflicts with BMA's own distillation pipeline. |
+| `dreaming.phases.light.enabled` | `true` | Keep. Light sleep generates useful short-term candidate memories. |
+| `dreaming.phases.rem.enabled` | `true` | Keep. REM sleep identifies cross-day patterns BMA's weekly synthesis can build on. |
+
+### active-memory
+
+Runtime transcript recall. BMA handles its own structured persistence via memory-wiki.
+
+| Setting | Value | Why |
+|---------|-------|-----|
+| `persistTranscripts` | `false` | BMA persists memory through structured files (memory-wiki bridge), not raw transcripts. Duplicating both paths wastes storage and pollutes indexes. |
+
+### lossless-claw
+
+Optional but recommended. Provides lossless conversation recall that BMA's daily distillation can draw from.
+
+### How They Fit Together
+
+```
+active-memory (persistTranscripts=false)
+  → Runtime session recall only
+  → BMA handles structured persistence via memory-wiki
+
+memory-wiki (indexDailyNotes=true, indexDreamReports=false)
+  → Indexes BMA's daily logs and structured memory files
+  → Powers memory_search across the active memory surface
+  → Excludes dream reports (BMA's distillation pipeline owns that)
+
+memory-core dreaming (light/rem ON, deep OFF)
+  → light + rem: generate promotion candidates
+  → deep DISABLED: BMA's daily distillation writes the structured output
+    (OpenClaw's deep phase writes to MEMORY.md directly → conflicts)
+
+BMA (daily distillation + weekly synthesis + retention)
+  → Consolidates: raw logs → structured knowledge
+  → Metabolizes: aged files → compressed summaries → cold archive
+  → Learns: repeated failures → procedural safeguards (Lesson-Imprint)
+```
+
+### Checking Your System
+
+`install.sh` checks your OpenClaw configuration and reports any settings that need adjustment. Run it first:
+
+```bash
+bash skills/biomimetic-memory-architecture/scripts/install.sh
+```
+
+---
+
+## System Compatibility
+
+BMA is not a standalone plugin. It integrates with three OpenClaw base systems. Each requires specific settings for BMA to function correctly.
+
+### Required Settings
+
+| System | Parameter | Required Value | Why |
+|--------|-----------|---------------|-----|
+| **memory-wiki** | `bridge.indexDailyNotes` | `true` | Index daily logs for structured search and retrieval |
+| **memory-wiki** | `bridge.indexDreamReports` | `false` | BMA's distillation handles dreaming output; avoid duplicate indexing |
+| **active-memory** | `persistTranscripts` | `false` | Runtime-only recall; BMA manages persistence via memory-wiki |
+| **memory-core** | `dreaming.phases.deep.enabled` | `false` | BMA's daily distillation handles promotion; OpenClaw's deep phase writes directly to MEMORY.md → conflicts |
+
+### Recommended Settings
+
+| System | Parameter | Value | Why |
+|--------|-----------|-------|-----|
+| **memory-wiki** | `bridge.indexMemoryRoot` | `true` | Index MEMORY.md, TOOLS.md, INFRA.md for cross-file search |
+| **memory-wiki** | `bridge.followMemoryEvents` | `false` | BMA doesn't use event-based triggers |
+| **memory-core** | `dreaming.enabled` | `true` | Keep light/REM phases on for memory candidate generation |
+
+### How They Fit Together
+
+```text
+active-memory (persistTranscripts=false)
+  → runtime-only session recall
+  → doesn't store transcripts (BMA handles persistence)
+
+memory-wiki (indexDailyNotes=true, indexDreamReports=false)
+  → indexes BMA's structured files under memory/
+  → provides full-text search across projects, runbooks, daily logs
+  → doesn't try to index dreaming output (BMA manages that)
+
+dreaming (light/REM ON, deep OFF)
+  → light sleep: short-term memory candidate detection
+  → REM sleep: dream report generation (pattern discovery)
+  → deep promotion DISABLED: BMA's daily distillation handles all writing
+    to memory files; OpenClaw's deep phase writes to MEMORY.md directly
+    → conflict with BMA's own promotion flow
+```
+
+**install.sh** automatically checks these settings and reports mismatches before installation.
 
 BMA is derived from **OpenCortex** ([MIT License](https://github.com/Suidge/openclaw-skills/blob/main/skills/opencortex/LICENSE)).
 

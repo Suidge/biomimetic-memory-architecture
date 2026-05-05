@@ -28,6 +28,97 @@ ensure_bma_additions() {
 }
 
 
+
+check_system_config() {
+  echo ""
+  echo "🔍 System Compatibility Check"
+  echo "   Checking OpenClaw plugin settings required for BMA..."
+  echo ""
+
+  local config_file config_output
+  config_file=""
+
+  if command -v openclaw >/dev/null 2>&1; then
+    config_output=$(openclaw config get 2>/dev/null || true)
+    config_file=$(echo "$config_output" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('path',''))" 2>/dev/null || true)
+  fi
+  if [ -z "$config_file" ]; then
+    config_file="$HOME/.openclaw/openclaw.json"
+  fi
+  if [ ! -f "$config_file" ]; then
+    echo "⚠️  Could not find openclaw.json. Skipping system check."
+    echo "   Refer to BMA README > System Compatibility for manual settings."
+    return 0
+  fi
+
+  python3 -c "
+import json
+with open('$config_file') as f:
+    cfg = json.load(f)
+entries = cfg.get('plugins',{}).get('entries',{})
+mw = entries.get('memory-wiki',{})
+am = entries.get('active-memory',{})
+mc = entries.get('memory-core',{})
+bridge = mw.get('config',{}).get('bridge',{})
+dreaming = mc.get('config',{}).get('dreaming',{})
+checks = {
+    'mw_enabled':      mw.get('enabled') == True,
+    'index_daily':     bridge.get('indexDailyNotes') == True,
+    'index_dream_off': bridge.get('indexDreamReports') == False,
+    'am_enabled':      am.get('enabled') == True,
+    'am_persist_off':  am.get('config',{}).get('persistTranscripts') == False,
+    'mc_enabled':      mc.get('enabled') == True,
+    'deep_off':        dreaming.get('phases',{}).get('deep',{}).get('enabled') != True,
+    'light_on':        dreaming.get('enabled') == True,
+    'mw_index_root':   bridge.get('indexMemoryRoot') == True,
+    'mw_no_events':    bridge.get('followMemoryEvents') == False,
+}
+labels = {
+    'index_daily': 'memory-wiki bridge.indexDailyNotes',
+    'index_dream_off': 'memory-wiki bridge.indexDreamReports',
+    'am_persist_off': 'active-memory persistTranscripts',
+    'deep_off': 'memory-core dreaming.phases.deep.enabled',
+    'light_on': 'memory-core dreaming.enabled',
+    'mw_index_root': 'memory-wiki bridge.indexMemoryRoot',
+    'mw_no_events': 'memory-wiki bridge.followMemoryEvents',
+    'mw_enabled': 'memory-wiki plugin',
+    'am_enabled': 'active-memory plugin',
+    'mc_enabled': 'memory-core plugin',
+}
+targets = {
+    'index_daily': 'true', 'index_dream_off': 'false',
+    'am_persist_off': 'false', 'deep_off': 'false', 'light_on': 'true',
+    'mw_index_root': 'true', 'mw_no_events': 'false',
+    'mw_enabled': 'enabled', 'am_enabled': 'enabled', 'mc_enabled': 'enabled',
+}
+critical_keys = {'index_daily','index_dream_off','am_persist_off','deep_off','mw_enabled','am_enabled','mc_enabled'}
+passed = sum(1 for v in checks.values() if v)
+total = len(checks)
+issues = []
+for k, ok in checks.items():
+    if not ok:
+        issues.append((k, labels.get(k), targets.get(k)))
+print(f'   {passed}/{total} checks passed')
+if issues:
+    print()
+    for k, label, target in issues:
+        sev = 'CRITICAL' if k in critical_keys else 'recommended'
+        mark = '❌' if k in critical_keys else '⚠️'
+        print(f'   {mark} {sev}: {label} should be {target}')
+    print()
+    crit = sum(1 for k,_,_ in issues if k in critical_keys)
+    if crit > 0:
+        print(f'   🔴 {crit} critical settings need fixing.')
+        print(f'   💡 Configure in openclaw.json, then re-run install.sh.')
+        print(f'   📖 See BMA README > System Compatibility.')
+else:
+    print('')
+    print('   ✅ All BMA system requirements met.')
+print()
+"
+}
+
+
 set_feature_flag() {
   local key="$1"
   local value="$2"
@@ -232,6 +323,8 @@ echo "🧠 BMA — Installing self-improving memory architecture"
 echo "   Workspace: $WORKSPACE"
 echo "   Timezone:  $TZ"
 echo "   Model:     $USER_MODEL"
+
+check_system_config
 echo ""
 
 # --- Feature Selection ---
