@@ -319,61 +319,6 @@ try:
     bridge = mw.get('config',{}).get('bridge',{})
     dreaming = mc.get('config',{}).get('dreaming',{})
     checks = {
-        'mw_enabled':      mw.get('enabled') == True,
-        'index_daily':     bridge.get('indexDailyNotes') == True,
-        'index_dream_off': bridge.get('indexDreamReports') == False,
-        'am_enabled':      am.get('enabled') == True,
-        'am_persist_off':  am.get('config',{}).get('persistTranscripts') == False,
-        'mc_enabled':      mc.get('enabled') == True,
-        'deep_off':        dreaming.get('phases',{}).get('deep',{}).get('enabled') != True,
-        'light_on':        dreaming.get('enabled') == True,
-        'mw_index_root':   bridge.get('indexMemoryRoot') == True,
-        'mw_no_events':    bridge.get('followMemoryEvents') == False,
-    }
-    labels = {
-        'index_daily': 'memory-wiki bridge.indexDailyNotes',
-        'index_dream_off': 'memory-wiki bridge.indexDreamReports',
-        'am_persist_off': 'active-memory persistTranscripts',
-        'deep_off': 'memory-core dreaming.phases.deep.enabled',
-        'light_on': 'memory-core dreaming.enabled',
-        'mw_index_root': 'memory-wiki bridge.indexMemoryRoot',
-        'mw_no_events': 'memory-wiki bridge.followMemoryEvents',
-        'mw_enabled': 'memory-wiki plugin',
-        'am_enabled': 'active-memory plugin',
-        'mc_enabled': 'memory-core plugin',
-    }
-    critical_keys = {'index_daily','index_dream_off','am_persist_off','deep_off','mw_enabled','am_enabled','mc_enabled'}
-    passed = sum(1 for v in checks.values() if v)
-    total = len(checks)
-    print(f'   {passed}/{total} checks passed')
-    for k, ok in checks.items():
-        if not ok:
-            sev = 'CRITICAL' if k in critical_keys else 'recommended'
-            mark = '❌' if k in critical_keys else '⚠️'
-            print(f'   {mark} {sev}: {labels.get(k)} should be')
-            target_vals = {'index_daily':'true','index_dream_off':'false','am_persist_off':'false','deep_off':'false','light_on':'true','mw_index_root':'true','mw_no_events':'false','mw_enabled':'enabled','am_enabled':'enabled','mc_enabled':'enabled'}
-            print(f'      {target_vals.get(k)}')
-except Exception as e:
-    print(f'   ⚠️  Could not check: {e}')
-    print(f'   💡 See BMA README > System Compatibility.')
-" 2>/dev/null || echo "   ⚠️  python3 unavailable; skipping system check"
-
-# --- System Compatibility ---
-echo ""
-echo "🔍 System Compatibility:"
-python3 -c "
-import json
-config_file = '${HOME}/.openclaw/openclaw.json'
-try:
-    with open(config_file) as f:
-        cfg = json.load(f)
-    entries = cfg.get('plugins',{}).get('entries',{})
-    mw = entries.get('memory-wiki',{})
-    am = entries.get('active-memory',{})
-    mc = entries.get('memory-core',{})
-    bridge = mw.get('config',{}).get('bridge',{})
-    dreaming = mc.get('config',{}).get('dreaming',{})
-    checks = {
         'plugins.entries.memory-wiki.enabled':                       ('memory-wiki plugin',            mw.get('enabled') == True, 'critical'),
         'plugins.entries.memory-wiki.config.bridge.indexDailyNotes':  ('bridge.indexDailyNotes=true',  bridge.get('indexDailyNotes') == True, 'critical'),
         'plugins.entries.memory-wiki.config.bridge.indexDreamReports':('bridge.indexDreamReports=false',bridge.get('indexDreamReports') == False, 'critical'),
