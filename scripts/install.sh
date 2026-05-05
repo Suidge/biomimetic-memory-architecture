@@ -35,88 +35,75 @@ check_system_config() {
   echo "   Checking OpenClaw plugin settings required for BMA..."
   echo ""
 
-  local config_file config_output
-  config_file=""
-
-  if command -v openclaw >/dev/null 2>&1; then
-    config_output=$(openclaw config get 2>/dev/null || true)
-    config_file=$(echo "$config_output" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d.get('result',{}).get('path',''))" 2>/dev/null || true)
-  fi
-  if [ -z "$config_file" ]; then
-    config_file="$HOME/.openclaw/openclaw.json"
-  fi
+  local config_file
+  config_file="$HOME/.openclaw/openclaw.json"
   if [ ! -f "$config_file" ]; then
-    echo "⚠️  Could not find openclaw.json. Skipping system check."
-    echo "   Refer to BMA README > System Compatibility for manual settings."
+    echo "⚠️  Could not find openclaw.json. Skipping."
+    echo "   📖 See BMA README > System Compatibility."
     return 0
   fi
 
   python3 -c "
-import json
+import json, sys
+
 with open('$config_file') as f:
     cfg = json.load(f)
+
 entries = cfg.get('plugins',{}).get('entries',{})
 mw = entries.get('memory-wiki',{})
 am = entries.get('active-memory',{})
 mc = entries.get('memory-core',{})
 bridge = mw.get('config',{}).get('bridge',{})
 dreaming = mc.get('config',{}).get('dreaming',{})
+
 checks = {
-    'mw_enabled':      mw.get('enabled') == True,
-    'index_daily':     bridge.get('indexDailyNotes') == True,
-    'index_dream_off': bridge.get('indexDreamReports') == False,
-    'am_enabled':      am.get('enabled') == True,
-    'am_persist_off':  am.get('config',{}).get('persistTranscripts') == False,
-    'mc_enabled':      mc.get('enabled') == True,
-    'deep_off':        dreaming.get('phases',{}).get('deep',{}).get('enabled') != True,
-    'light_on':        dreaming.get('enabled') == True,
-    'mw_index_root':   bridge.get('indexMemoryRoot') == True,
-    'mw_no_events':    bridge.get('followMemoryEvents') == False,
+    'plugins.entries.memory-wiki.enabled':                       ('memory-wiki plugin',            mw.get('enabled') == True, 'critical'),
+    'plugins.entries.memory-wiki.config.bridge.indexDailyNotes':  ('bridge.indexDailyNotes=true',  bridge.get('indexDailyNotes') == True, 'critical'),
+    'plugins.entries.memory-wiki.config.bridge.indexDreamReports':('bridge.indexDreamReports=false',bridge.get('indexDreamReports') == False, 'critical'),
+    'plugins.entries.active-memory.enabled':                     ('active-memory plugin',          am.get('enabled') == True, 'critical'),
+    'plugins.entries.active-memory.config.persistTranscripts':    ('persistTranscripts=false',     am.get('config',{}).get('persistTranscripts') == False, 'critical'),
+    'plugins.entries.memory-core.enabled':                      ('memory-core plugin',            mc.get('enabled') == True, 'critical'),
+    'plugins.entries.memory-core.config.dreaming.phases.deep.enabled': ('dreaming.deep.enabled=false',dreaming.get('phases',{}).get('deep',{}).get('enabled') != True, 'critical'),
+    'plugins.entries.memory-core.config.dreaming.enabled':        ('dreaming.enabled=true',       dreaming.get('enabled') == True, 'recommended'),
+    'plugins.entries.memory-wiki.config.bridge.indexMemoryRoot':  ('bridge.indexMemoryRoot=true',  bridge.get('indexMemoryRoot') == True, 'recommended'),
+    'plugins.entries.memory-wiki.config.bridge.followMemoryEvents':('bridge.followMemoryEvents=false',bridge.get('followMemoryEvents') == False, 'recommended'),
 }
-labels = {
-    'index_daily': 'memory-wiki bridge.indexDailyNotes',
-    'index_dream_off': 'memory-wiki bridge.indexDreamReports',
-    'am_persist_off': 'active-memory persistTranscripts',
-    'deep_off': 'memory-core dreaming.phases.deep.enabled',
-    'light_on': 'memory-core dreaming.enabled',
-    'mw_index_root': 'memory-wiki bridge.indexMemoryRoot',
-    'mw_no_events': 'memory-wiki bridge.followMemoryEvents',
-    'mw_enabled': 'memory-wiki plugin',
-    'am_enabled': 'active-memory plugin',
-    'mc_enabled': 'memory-core plugin',
-}
-targets = {
-    'index_daily': 'true', 'index_dream_off': 'false',
-    'am_persist_off': 'false', 'deep_off': 'false', 'light_on': 'true',
-    'mw_index_root': 'true', 'mw_no_events': 'false',
-    'mw_enabled': 'enabled', 'am_enabled': 'enabled', 'mc_enabled': 'enabled',
-}
-critical_keys = {'index_daily','index_dream_off','am_persist_off','deep_off','mw_enabled','am_enabled','mc_enabled'}
-passed = sum(1 for v in checks.values() if v)
+
+passed = sum(1 for _, ok, _ in checks.values() if ok)
 total = len(checks)
-issues = []
-for k, ok in checks.items():
-    if not ok:
-        issues.append((k, labels.get(k), targets.get(k)))
+issues = [(path, desc, sev) for path, (desc, ok, sev) in checks.items() if not ok]
+
 print(f'   {passed}/{total} checks passed')
-if issues:
-    print()
-    for k, label, target in issues:
-        sev = 'CRITICAL' if k in critical_keys else 'recommended'
-        mark = '❌' if k in critical_keys else '⚠️'
-        print(f'   {mark} {sev}: {label} should be {target}')
-    print()
-    crit = sum(1 for k,_,_ in issues if k in critical_keys)
-    if crit > 0:
-        print(f'   🔴 {crit} critical settings need fixing.')
-        print(f'   💡 Configure in openclaw.json, then re-run install.sh.')
-        print(f'   📖 See BMA README > System Compatibility.')
-else:
-    print('')
+if not issues:
     print('   ✅ All BMA system requirements met.')
-print()
+else:
+    print()
+    critical_paths = [p for p,_,s in issues if s == 'critical']
+    for path, desc, sev in issues:
+        mark = '❌' if sev == 'critical' else '⚠️'
+        print(f'   {mark} {sev}: {desc}')
+    print()
+    if critical_paths:
+        print('   To auto-fix critical issues:')
+        for path in critical_paths:
+            val_map = {
+                'plugins.entries.memory-wiki.enabled': True,
+                'plugins.entries.memory-wiki.config.bridge.indexDailyNotes': True,
+                'plugins.entries.memory-wiki.config.bridge.indexDreamReports': False,
+                'plugins.entries.active-memory.enabled': True,
+                'plugins.entries.active-memory.config.persistTranscripts': False,
+                'plugins.entries.memory-core.enabled': True,
+                'plugins.entries.memory-core.config.dreaming.phases.deep.enabled': False,
+            }
+            val = val_map.get(path, True)
+            import json as j
+            print(f'   gateway config.patch {j.dumps({path: val})}')
+        print()
+        print('   After fixing, re-run install.sh or verify.sh.')
 "
 }
+
+
 
 
 set_feature_flag() {

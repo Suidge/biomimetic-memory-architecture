@@ -358,6 +358,67 @@ except Exception as e:
     print(f'   💡 See BMA README > System Compatibility.')
 " 2>/dev/null || echo "   ⚠️  python3 unavailable; skipping system check"
 
+# --- System Compatibility ---
+echo ""
+echo "🔍 System Compatibility:"
+python3 -c "
+import json
+config_file = '${HOME}/.openclaw/openclaw.json'
+try:
+    with open(config_file) as f:
+        cfg = json.load(f)
+    entries = cfg.get('plugins',{}).get('entries',{})
+    mw = entries.get('memory-wiki',{})
+    am = entries.get('active-memory',{})
+    mc = entries.get('memory-core',{})
+    bridge = mw.get('config',{}).get('bridge',{})
+    dreaming = mc.get('config',{}).get('dreaming',{})
+    checks = {
+        'plugins.entries.memory-wiki.enabled':                       ('memory-wiki plugin',            mw.get('enabled') == True, 'critical'),
+        'plugins.entries.memory-wiki.config.bridge.indexDailyNotes':  ('bridge.indexDailyNotes=true',  bridge.get('indexDailyNotes') == True, 'critical'),
+        'plugins.entries.memory-wiki.config.bridge.indexDreamReports':('bridge.indexDreamReports=false',bridge.get('indexDreamReports') == False, 'critical'),
+        'plugins.entries.active-memory.enabled':                     ('active-memory plugin',          am.get('enabled') == True, 'critical'),
+        'plugins.entries.active-memory.config.persistTranscripts':    ('persistTranscripts=false',     am.get('config',{}).get('persistTranscripts') == False, 'critical'),
+        'plugins.entries.memory-core.enabled':                      ('memory-core plugin',            mc.get('enabled') == True, 'critical'),
+        'plugins.entries.memory-core.config.dreaming.phases.deep.enabled': ('dreaming.deep.enabled=false',dreaming.get('phases',{}).get('deep',{}).get('enabled') != True, 'critical'),
+        'plugins.entries.memory-core.config.dreaming.enabled':        ('dreaming.enabled=true',       dreaming.get('enabled') == True, 'recommended'),
+        'plugins.entries.memory-wiki.config.bridge.indexMemoryRoot':  ('bridge.indexMemoryRoot=true',  bridge.get('indexMemoryRoot') == True, 'recommended'),
+        'plugins.entries.memory-wiki.config.bridge.followMemoryEvents':('bridge.followMemoryEvents=false',bridge.get('followMemoryEvents') == False, 'recommended'),
+    }
+    passed = sum(1 for _, ok, _ in checks.values() if ok)
+    total = len(checks)
+    issues = [(path, desc, sev) for path, (desc, ok, sev) in checks.items() if not ok]
+    print(f'   {passed}/{total} checks passed')
+    if not issues:
+        print('   ✅ All BMA system requirements met.')
+    else:
+        print()
+        critical_paths = [p for p,_,s in issues if s == 'critical']
+        for path, desc, sev in issues:
+            mark = '❌' if sev == 'critical' else '⚠️'
+            print(f'   {mark} {sev}: {desc}')
+        print()
+        if critical_paths:
+            print('   To auto-fix critical issues:')
+            for path in critical_paths:
+                val_map = {
+                    'plugins.entries.memory-wiki.enabled': True,
+                    'plugins.entries.memory-wiki.config.bridge.indexDailyNotes': True,
+                    'plugins.entries.memory-wiki.config.bridge.indexDreamReports': False,
+                    'plugins.entries.active-memory.enabled': True,
+                    'plugins.entries.active-memory.config.persistTranscripts': False,
+                    'plugins.entries.memory-core.enabled': True,
+                    'plugins.entries.memory-core.config.dreaming.phases.deep.enabled': False,
+                }
+                val = val_map.get(path, True)
+                print(f'   gateway config.patch {json.dumps({path: val})}')
+            print()
+            print('   After fixing, re-run install.sh or verify.sh.')
+except Exception as e:
+    print(f'   ⚠️  Could not check: {e}')
+    print(f'   💡 See BMA README > System Compatibility.')
+" 2>/dev/null || echo "   ⚠️  python3 unavailable; skipping"
+
 # --- BMA additions ---
 echo ""
 echo "🧬 BMA additions:"
