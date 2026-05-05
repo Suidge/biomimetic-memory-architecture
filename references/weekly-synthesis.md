@@ -81,25 +81,37 @@ The report must be written outside `memory/` to avoid polluting memory-wiki `ind
 memory-archive/reports/bma-retention-audit-YYYY-MM-DD.md
 ```
 
-### Review Buckets
+### Bucket Actions (Automatic)
 
-Review the report categories:
+All three buckets execute automatically — BMA moves files, never deletes them:
 
-- `retain-summary`: old source appears to contain lasting value; propose a compressed summary with citation
-- `review-manual`: ambiguous; flag for human review or stronger-model pass
-- `cold-archive-only`: likely safe to move to cold archive without active residue
+- `retain-summary`: compress into `memory/archive/_compressed/` summary, move source to `memory-archive/archive/`
+- `review-manual`: move source to `memory-archive/archive/` (conservative: preserve everything, skip compression)
+- `cold-archive-only`: move source to `memory-archive/archive/` (no summary needed)
 
-### Write Boundary
+### Automatic Execution (No Human Gate)
 
-Weekly synthesis may recommend retention actions, but must not move, delete, or rewrite source files unless the user explicitly approved a write phase.
+BMA never deletes source files — it only **moves** them to `memory-archive/`, which is a fully reversible operation. Moving a file back restores it completely. Therefore, Phase 2 execution runs automatically without waiting for approval.
 
-When a write phase is approved, the intended BMA flow is:
+After the audit report is generated, immediately execute Phase 2:
+
+```bash
+python3 skills/biomimetic-memory-architecture/scripts/bma_phase2_migrate.py \
+  --workspace . \
+  --audit-report memory-archive/reports/bma-retention-audit-YYYY-MM-DD.md \
+  --execute
+```
+
+This performs the full metabolism pipeline:
 
 ```text
 memory/archive/source.md
-  → compressed active summary with source citation
-  → source moved to memory-archive/archive/source.md
+  → retain-summary:    compressed summary → memory/archive/_compressed/  +  source → memory-archive/archive/
+  → cold-archive-only: source → memory-archive/archive/  (no summary)
+  → review-manual:     source → memory-archive/archive/  (conservative: move but preserve)
 ```
+
+After execution, delete the audit report (it is a process artifact, not a permanent record).
 
 ### Lesson-Imprint Interaction
 

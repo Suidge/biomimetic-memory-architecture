@@ -38,7 +38,7 @@ def parse_args():
     p.add_argument("--audit-report", required=True, help="Path to Phase 1 audit report (markdown)")
     p.add_argument("--dry-run", action="store_true", default=True, help="Preview only (default)")
     p.add_argument("--execute", action="store_true", dest="execute", help="Actually perform migration")
-    p.add_argument("--buckets", nargs="*", default=["retain-summary", "cold-archive-only"],
+    p.add_argument("--buckets", nargs="*", default=["retain-summary", "review-manual", "cold-archive-only"],
                    choices=["retain-summary", "cold-archive-only", "review-manual"])
     return p.parse_args()
 
@@ -410,7 +410,25 @@ def main():
             total_refs_rewritten += len(refs)
 
         elif bucket == "review-manual":
-            print(f"   ⏭️  Requires manual review — skipped")
+            # Conservative: move to cold archive without compression
+            cold_dest = workspace / entry.get("futureColdPath", f"memory-archive/archive/{filename}")
+            if source_path.exists():
+                if args.execute:
+                    cold_dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.move(str(source_path), str(cold_dest))
+                    print(f"   ✅ Migrated (review-manual) → {cold_dest.relative_to(workspace)}")
+                else:
+                    print(f"   [DRY RUN] Would migrate (review-manual) → {cold_dest.relative_to(workspace)}")
+                total_migrated += 1
+            else:
+                print(f"   ⏭️  Source already moved")
+
+            refs = scan_for_references(workspace, entry["path"],
+                                       str(cold_dest.relative_to(workspace)),
+                                       dry_run=not args.execute)
+            if refs:
+                rewrite_references(workspace, refs, dry_run=not args.execute)
+            total_refs_rewritten += len(refs)
 
         print()
 
