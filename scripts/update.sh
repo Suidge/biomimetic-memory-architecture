@@ -5,7 +5,7 @@
 # Safe to run multiple times; never overwrites user-customized files.
 set -euo pipefail
 
-BMA_VERSION="0.1.0"
+BMA_VERSION="0.1.7"
 DRY_RUN=false
 for arg in "$@"; do [ "$arg" = "--dry-run" ] && DRY_RUN=true; done
 

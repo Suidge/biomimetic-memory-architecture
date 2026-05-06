@@ -37,7 +37,7 @@ Phase 1 (audit)      Phase 2 (metabolize)
 Read-only scan  →    Compress summaries, move sources to cold archive, rewrite references
 ```
 
-BMA does not optimize for recall speed. It optimizes for **signal retention** — keeping the decisions, failures, and config changes that shape future behavior, while letting transient logs fade naturally.
+BMA does not optimize for recall speed. It optimizes for **signal retention** — keeping the current state, decisions, failures, and reusable configuration lessons that shape future behavior, while letting transient command logs fade naturally.
 
 ---
 
@@ -214,6 +214,16 @@ python3 skills/biomimetic-memory-architecture/scripts/bma_phase2_migrate.py \
   --audit-report memory-archive/reports/bma-retention-audit-YYYY-MM-DD.md \
   --execute
 ```
+
+---
+
+## Changelog
+
+### v0.1.7
+
+- Refined Daily Distillation rules so project files remain current-state knowledge maps instead of append-only changelogs.
+- Added explicit guidance for system/config changes: keep durable decisions, current effective state, reusable lessons, unresolved issues, and archive references; leave raw command traces in daily logs.
+- Added an `openclaw.md`-specific rule to prevent complete setting-change ledgers from bloating project memory.
 
 ---
 

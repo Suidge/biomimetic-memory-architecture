@@ -1,6 +1,6 @@
 {
   "slug": "biomimetic-memory-architecture",
-  "version": "0.1.0",
+  "version": "0.1.7",
   "status": "mvp",
   "derivedFrom": "https://github.com/Suidge/openclaw-skills/tree/main/skills/opencortex",
   "license": "MIT",

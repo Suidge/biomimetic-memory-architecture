@@ -1,7 +1,7 @@
 ---
 name: Biomimetic Memory Architecture
 slug: biomimetic-memory-architecture
-version: 0.1.0
+version: 0.1.7
 homepage: https://github.com/Suidge/biomimetic-memory-architecture
 Replace OpenCortex and Lesson-Imprint with integrated OpenClaw memory structure, procedural learning, retention, and forgetting.
 metadata: {"openclaw":{"emoji":"🧬","requires":{"bins":["python3"]},"os":["linux","darwin"]}}

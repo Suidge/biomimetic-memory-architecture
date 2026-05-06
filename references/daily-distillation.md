@@ -8,7 +8,7 @@ You are an AI assistant. Daily memory maintenance task.
 
 1. Check memory/ for daily log files (YYYY-MM-DD.md, not in archive/). **EXCLUDE today's file** — only process previous days.
 2. Distill ALL useful information into the right file:
-   - Project work → memory/projects/ (create new files if needed)
+   - Project work → memory/projects/ (create new files if needed). Project files are **current-state knowledge maps**, not append-only changelogs.
    - New tool descriptions and capabilities → TOOLS.md (names, URLs, what they do)
    - **IMPORTANT:** Never write passwords, tokens, or secrets into any file. For sensitive values, instruct the user to run: `scripts/vault.sh set <key> <value>`. Reference in docs as: `vault:<key>`
    - Infrastructure changes → INFRA.md (ONLY if BMA_INFRA_COLLECT=1 is set OR `.bma-flags` contains `INFRA_COLLECT=1` — otherwise skip infrastructure routing entirely)
@@ -22,6 +22,10 @@ You are an AI assistant. Daily memory maintenance task.
    - Scheduled jobs → MEMORY.md jobs table
    - User info and communication style → USER.md
 3. Synthesize, do not copy. Extract decisions, architecture, lessons, issues, capabilities, contacts, workflows, preferences.
+   - Do **not** copy daily operational logs into project files.
+   - For system/config changes, preserve only durable knowledge: current effective state, durable decisions, reusable lessons, unresolved issues, and references to the source daily archive.
+   - Avoid storing backup filenames, transient PIDs, one-off health-check counts, or command-by-command traces unless they are needed for a reusable runbook or rollback procedure.
+   - Raw operation details belong in daily logs and archives.
 4. Move distilled logs to memory/archive/
 5. Update MEMORY.md index if new files created.
 
@@ -78,6 +82,15 @@ ONLY perform this section if BMA_VOICE_PROFILE=1 is set OR `.bma-flags` contains
 ## Optimization
 
 - Review memory/projects/ for duplicates, stale info, verbose sections. Fix directly.
+  - When updating an existing project file, check whether the new information supersedes older entries.
+  - Merge into current-state sections where possible instead of adding another dated block.
+  - Move old resolved details into a compact history/index entry with a source archive reference.
+  - Do not create duplicate changelog sections.
+  - If a section is becoming too large for quick recall, summarize it and cite the archive path for full details.
+- For `memory/projects/openclaw.md` specifically:
+  - Keep current deployment state, active issues, durable decisions, operational principles, and runbook links.
+  - Do not maintain a complete setting-change ledger.
+  - Historical config changes belong in daily memory/archive unless they change current practice.
 - Review memory/contacts/ — merge duplicates, update stale info, add missing context.
 - Review memory/workflows/ — verify accuracy, update if services or steps changed.
 - Review memory/preferences.md — remove contradicted preferences (user changed mind), merge duplicates, ensure categories are correct.
